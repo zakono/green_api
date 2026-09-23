@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GREEN-API — тестовое задание</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    background: #f4f6f8;
+    margin: 0;
+    padding: 24px;
+    color: #222;
+  }
+  h1 {
+    font-size: 18px;
+    margin: 0 0 20px;
+    text-align: center;
+    color: #2b2b2b;
+  }
+  .wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  }
+  .grid {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .col {
+    flex: 1 1 320px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  fieldset {
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 12px;
+  }
+  legend {
+    font-size: 12px;
+    color: #777;
+    padding: 0 6px;
+  }
+  input, textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 14px;
+    font-family: inherit;
+  }
+  textarea { resize: vertical; }
+  button {
+    padding: 10px 12px;
+    border: 1px solid #25d366;
+    background: #fff;
+    color: #128c3e;
+    border-radius: 5px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  button:hover { background: #e9fbef; }
+  button:disabled { opacity: .5; cursor: default; }
+  .resp {
+    width: 100%;
+    height: 620px;
+    resize: vertical;
+    font-family: "SFMono-Regular", Consolas, Menlo, monospace;
+    font-size: 12.5px;
+    background: #fafafa;
+    white-space: pre;
+  }
+  .hint {
+    font-size: 11px;
+    color: #999;
+    margin: -6px 0 4px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>GREEN-API — тестовое задание (Специалист технической поддержки 2 линии)</h1>
+  <div class="grid">
+    <div class="col">
+
+      <fieldset>
+        <legend>Подключение к инстансу</legend>
+        <input id="idInstance" type="text" placeholder="idInstance">
+        <div style="height:8px"></div>
+        <input id="apiTokenInstance" type="text" placeholder="ApiTokenInstance">
+      </fieldset>
+
+      <button id="btnGetSettings">getSettings</button>
+      <button id="btnGetStateInstance">getStateInstance</button>
+
+      <fieldset>
+        <legend>sendMessage</legend>
+        <input id="sendMsgPhone" type="text" placeholder="Номер телефона, напр. 77771234567">
+        <div class="hint">без "+", без пробелов</div>
+        <textarea id="sendMsgText" rows="3" placeholder="Hello World!"></textarea>
+      </fieldset>
+      <button id="btnSendMessage">sendMessage</button>
+
+      <fieldset>
+        <legend>sendFileByUrl</legend>
+        <input id="sendFilePhone" type="text" placeholder="Номер телефона, напр. 77771234567">
+        <div style="height:8px"></div>
+        <input id="sendFileUrl" type="text" placeholder="https://my.site.com/img/horse.png">
+      </fieldset>
+      <button id="btnSendFileByUrl">sendFileByUrl</button>
+
+    </div>
+
+    <div class="col">
+      <label class="hint" style="font-size:12px;color:#555;">Ответ:</label>
+      <textarea id="response" class="resp" readonly placeholder="Здесь появится ответ метода..."></textarea>
+    </div>
+  </div>
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const responseEl = $('response');
+
+  function baseUrl() {
+    const id = $('idInstance').value.trim();
+    return `https://api.green-api.com/waInstance${id}`;
+  }
+
+  function creds() {
+    const idInstance = $('idInstance').value.trim();
+    const apiTokenInstance = $('apiTokenInstance').value.trim();
+    if (!idInstance || !apiTokenInstance) {
+      alert('Укажите idInstance и ApiTokenInstance');
+      return null;
+    }
+    return { idInstance, apiTokenInstance };
+  }
+
+  function show(data) {
+    try {
+      responseEl.value = JSON.stringify(data, null, 2);
+    } catch (e) {
+      responseEl.value = String(data);
+    }
+  }
+
+  async function callGet(method) {
+    const c = creds();
+    if (!c) return;
+    responseEl.value = 'Загрузка...';
+    try {
+      const res = await fetch(`${baseUrl()}/${method}/${c.apiTokenInstance}`);
+      const data = await res.json();
+      show(data);
+    } catch (err) {
+      show({ error: String(err) });
+    }
+  }
+
+  async function callPost(method, body) {
+    const c = creds();
+    if (!c) return;
+    responseEl.value = 'Загрузка...';
+    try {
+      const res = await fetch(`${baseUrl()}/${method}/${c.apiTokenInstance}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      show(data);
+    } catch (err) {
+      show({ error: String(err) });
+    }
+  }
+
+  function toChatId(phone) {
+    return phone.replace(/\D/g, '') + '@c.us';
+  }
+
+  $('btnGetSettings').addEventListener('click', () => callGet('getSettings'));
+  $('btnGetStateInstance').addEventListener('click', () => callGet('getStateInstance'));
+
+  $('btnSendMessage').addEventListener('click', () => {
+    const phone = $('sendMsgPhone').value.trim();
+    const message = $('sendMsgText').value;
+    if (!phone || !message) { alert('Укажите телефон и текст сообщения'); return; }
+    callPost('sendMessage', { chatId: toChatId(phone), message });
+  });
+
+  $('btnSendFileByUrl').addEventListener('click', () => {
+    const phone = $('sendFilePhone').value.trim();
+    const urlFile = $('sendFileUrl').value.trim();
+    if (!phone || !urlFile) { alert('Укажите телефон и ссылку на файл'); return; }
+    const fileName = urlFile.split('/').pop() || 'file';
+    callPost('sendFileByUrl', { chatId: toChatId(phone), urlFile, fileName });
+  });
+</script>
+</body>
+</html>
